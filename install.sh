@@ -23,7 +23,7 @@ if [ -x "$prefix/bin/pw.x" ] && [ -z "${QE_FORCE:-}" ]; then
 fi
 
 # login shells here auto-load miniconda and gcc, don't let that reach the build
-module purge || true
+module purge >/dev/null 2>&1 || true
 module load $MODULE
 [ -n "${MKLROOT:-}" ] || { echo "MKL missing after loading $MODULE" >&2; exit 1; }
 
@@ -51,7 +51,7 @@ make -j"$jobs" all >make.log 2>&1
 make install >>make.log 2>&1
 
 cat >"$prefix/env.sh" <<EOF
-module purge || true
+module purge >/dev/null 2>&1 || true
 module load $MODULE
 export PATH="$prefix/bin:\$PATH"
 export OMP_NUM_THREADS=\${OMP_NUM_THREADS:-1}
