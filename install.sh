@@ -56,7 +56,9 @@ module load $MODULE
 export PATH="$prefix/bin:\$PATH"
 export OMP_NUM_THREADS=\${OMP_NUM_THREADS:-1}
 # srun needs this, but setting it always breaks plain mpirun on a login node
-[ -n "\${SLURM_JOB_ID:-}" ] && export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so
+if [ -n "\${SLURM_JOB_ID:-}" ]; then
+	export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so
+fi
 EOF
 
 echo "==> test run"
