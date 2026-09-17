@@ -1,0 +1,9 @@
+# Nothing is written inside this repo by design; these are only here to catch
+# accidental in-tree builds and stray editor files.
+*.tar.gz
+*.log
+tmp/
+build/
+.build/
+*.swp
+.DS_Store
