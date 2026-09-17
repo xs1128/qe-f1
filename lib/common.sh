@@ -33,17 +33,34 @@ die() {
 
 # Run a command with its output captured to the log, showing only progress.
 # Use `run "description" cmd args...` and check the return value.
+#
+# Set RUN_OUTPUT=path for the call to send the command's output to that file as
+# well as the log, for when the output is itself an artefact worth keeping.
 run() {
   local desc=$1; shift
+  local sink=${RUN_OUTPUT:-}
+  local rc=0
   _log "RUN $*"
+
   if [[ ${VERBOSE:-0} == 1 ]]; then
     printf '    %s%s%s\n' "$_c_dim" "$desc" "$_c_off"
-    "$@" 2>&1 | tee -a "$LOG_FILE"
-    return "${PIPESTATUS[0]}"
+    if [[ -n $sink ]]; then
+      "$@" >"$sink" 2>&1; rc=$?
+      cat -- "$sink" | tee -a "$LOG_FILE"
+    else
+      "$@" 2>&1 | tee -a "$LOG_FILE"
+      rc=${PIPESTATUS[0]}
+    fi
+    return "$rc"
   fi
+
   printf '    %s ... ' "$desc"
-  local rc=0
-  "$@" >>"$LOG_FILE" 2>&1 || rc=$?
+  if [[ -n $sink ]]; then
+    "$@" >"$sink" 2>&1 || rc=$?
+    cat -- "$sink" >>"$LOG_FILE" 2>/dev/null || true
+  else
+    "$@" >>"$LOG_FILE" 2>&1 || rc=$?
+  fi
   if ((rc == 0)); then
     printf '%sdone%s\n' "$_c_green" "$_c_off"
   else

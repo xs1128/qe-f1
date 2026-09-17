@@ -224,10 +224,14 @@ EOF
   ln -sfn -- "$PREFIX/share/qe-f1/si-scf/pseudo" "$PREFIX/share/qe-f1/pseudo"
 }
 
+# Written only after the self-test passes, so the presence of this file is what
+# lets a re-run skip the build: a half-finished install must never look valid.
 write_provenance() {
-  local out=$PREFIX/$PROVENANCE_REL
+  local out=$PREFIX/$PROVENANCE_REL verified=skipped
+  ((RUN_TEST == 1)) && verified=yes
   mkdir -p -- "$(dirname -- "$out")"
   {
+    printf 'verified=%s\n' "$verified"
     printf 'installed_at=%s\n' "$(date -Iseconds)"
     printf 'installed_by=%s\n' "$(id -un)"
     printf 'installed_on=%s\n' "$(uname -n)"
@@ -246,7 +250,8 @@ write_provenance() {
 
 self_test() {
   step "Verifying the install with a real SCF calculation"
-  local rundir=$WORK_DIR/self-test
+  # Kept under the prefix, not the build tree, so the evidence survives cleanup.
+  local rundir=$PREFIX/share/qe-f1/self-test
   rm -rf -- "$rundir"; mkdir -p -- "$rundir"
   cp -- "$REPO_ROOT/tests/si-scf/si.scf.in" "$rundir/"
   cp -r -- "$REPO_ROOT/tests/si-scf/pseudo" "$rundir/"
@@ -257,8 +262,9 @@ self_test() {
   # This runs on a login node, outside Slurm, so PMI must not be forced.
   unset I_MPI_PMI_LIBRARY
   export OMP_NUM_THREADS=1
-  run "mpirun -np $QE_TEST_RANKS pw.x" env -C "$rundir" \
-    mpirun -np "$QE_TEST_RANKS" "$PREFIX/bin/pw.x" -i si.scf.in ||
+  RUN_OUTPUT=$rundir/pw.out \
+    run "mpirun -np $QE_TEST_RANKS pw.x" env -C "$rundir" \
+      mpirun -np "$QE_TEST_RANKS" "$PREFIX/bin/pw.x" -i si.scf.in ||
     die "the verification calculation did not run; see $rundir/pw.out"
 
   grep -q 'JOB DONE' "$rundir/pw.out" ||
@@ -298,8 +304,8 @@ main() {
   configure_source
   build_and_install
   write_env_script
-  write_provenance
   ((RUN_TEST == 1)) && self_test
+  write_provenance
 
   if ((KEEP_BUILD == 0)); then
     rm -rf -- "$WORK_DIR"
