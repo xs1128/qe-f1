@@ -8,7 +8,7 @@ No container, no Spack.
 On a login node (`f1-ilgn01` or `f1-ilgn02`), from any directory:
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/qe-f1.git
+git clone https://github.com/xs1128/qe-f1.git
 ./qe-f1/install.sh
 ```
 
