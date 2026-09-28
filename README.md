@@ -58,6 +58,12 @@ against `-15.83812818 Ry`. If that doesn't match, the install fails instead of
 handing you binaries that don't work. The output is kept in
 `~/opt/qe-7.6/share/test/pw.out`.
 
+Only a build that passes that check gets a `.installed` stamp recording the
+version, module, checksum and measured energy, and the "already installed"
+shortcut keys off that stamp rather than off the presence of `pw.x`. A build
+that failed its self-test has binaries too, and skipping over those on the next
+run would quietly undo the check.
+
 ## Notes and limitations
 
 - x86_64 only. The ARM (Grace) nodes have no Intel compiler or MKL.

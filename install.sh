@@ -15,12 +15,17 @@ jobs=${QE_JOBS:-32}
 cache=$HOME/.cache/qe-f1
 build=$prefix/.build
 tarball=$cache/q-e-qe-$VER.tar.gz
+stamp=$prefix/.installed
 
-if [ -x "$prefix/bin/pw.x" ] && [ -z "${QE_FORCE:-}" ]; then
+# keyed on the stamp, not on bin/pw.x: a build whose self-test failed still has
+# binaries, and treating those as "already installed" would hand them straight
+# back on the next run
+if [ -f "$stamp" ] && [ -z "${QE_FORCE:-}" ]; then
 	echo "already installed in $prefix, set QE_FORCE=1 to rebuild"
 	echo "source $prefix/env.sh to use it"
 	exit 0
 fi
+rm -f "$stamp"
 
 # login shells here auto-load miniconda and gcc, don't let that reach the build
 module purge >/dev/null 2>&1 || true
@@ -47,8 +52,8 @@ grep '^BLAS_LIBS' make.inc | grep -q mkl || { echo "MKL not picked up, see $PWD/
 grep -q __SCALAPACK make.inc || { echo "ScaLAPACK not enabled" >&2; exit 1; }
 
 echo "==> building with $jobs jobs, this takes a few minutes"
-make -j"$jobs" all >make.log 2>&1
-make install >>make.log 2>&1
+make -j"$jobs" all >make.log 2>&1 || { echo "build failed, see $PWD/make.log" >&2; exit 1; }
+make install >>make.log 2>&1 || { echo "make install failed, see $PWD/make.log" >&2; exit 1; }
 
 cat >"$prefix/env.sh" <<EOF
 module purge >/dev/null 2>&1 || true
@@ -76,6 +81,15 @@ echo "    total energy $energy Ry, matches reference"
 
 cp "$here/slurm/example-scf.sbatch" "$prefix/share/"
 rm -rf "$build"
+
+# only now is this install known good, so only now does it get its stamp
+cat >"$stamp" <<EOF
+qe        $VER
+module    $MODULE
+sha256    $SHA
+energy    $energy Ry
+built     $(date -Is)
+EOF
 
 echo
 echo "done, QE $VER is in $prefix"
